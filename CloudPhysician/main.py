@@ -1,3 +1,4 @@
+from PIL import Image
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -140,3 +141,29 @@ step_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=7, gamma=0.1)
 
 model = train_model(model, criterion, optimizer, step_lr_scheduler, num_epochs=10)
 
+FILE = "model1.pth"
+torch.save(model, FILE)
+model1 = torch.load(FILE)
+loader = transforms.Compose([
+    transforms.ToTensor(),
+    transforms.Normalize(mean, std)
+    ])
+img = Image.open(data_dir+"/val/2/2_100.jpg")
+def image_loader(image_path):
+    """load image, returns cuda tensor"""
+    image_name = Image.open(image_path)
+    image = loader(image_name).float()
+    image = image.unsqueeze(0)
+    return image.cuda()
+
+def prediction(image_path):
+  loader = transforms.Compose([
+    transforms.ToTensor(),
+    transforms.Normalize(mean, std)
+    ])
+  image_name = Image.open(image_path)
+  image = loader(image_name).float()
+  image = image.unsqueeze(0)
+  return torch.argmax(model1(image.cuda())).item()
+
+print(prediction("/content/drive/MyDrive/cluster/val/1/1_53.jpg"))
