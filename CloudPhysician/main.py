@@ -13,22 +13,18 @@ import copy
 mean = np.array([0.5, 0.5, 0.5])
 std = np.array([0.25, 0.25, 0.25])
 
-# data_transforms = {
-#     'train': transforms.Compose([
-#         transforms.RandomResizedCrop(224),
-#         transforms.RandomHorizontalFlip(),
-#         transforms.ToTensor(),
-#         transforms.Normalize(mean, std)
-#     ]),
-#     'val': transforms.Compose([
-#         transforms.Resize(256),
-#         transforms.CenterCrop(224),
-#         transforms.ToTensor(),
-#         transforms.Normalize(mean, std)
-#     ]),
-# }
+data_transforms = {
+    'train': transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize(mean, std)
+    ]),
+    'val': transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize(mean, std)
+    ]),
+}
 
-data_dir = 'cluster'
+data_dir = "/content/drive/MyDrive/cluster"
 image_datasets = {x: datasets.ImageFolder(os.path.join(data_dir, x),
                                           data_transforms[x])
                   for x in ['train', 'val']}
@@ -41,6 +37,7 @@ class_names = image_datasets['train'].classes
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print(class_names)
 
+
 def imshow(inp, title):
     """Imshow for Tensor."""
     inp = inp.numpy().transpose((1, 2, 0))
@@ -49,6 +46,7 @@ def imshow(inp, title):
     plt.imshow(inp)
     plt.title(title)
     plt.show()
+
 
 # Get a batch of training data
 inputs, classes = next(iter(dataloaders['train']))
@@ -125,57 +123,20 @@ def train_model(model, criterion, optimizer, scheduler, num_epochs=25):
     model.load_state_dict(best_model_wts)
     return model
 
-def visualize_model(model, num_images=6):
-    was_training = model.training
-    model.eval()
-    images_so_far = 0
-    fig = plt.figure()
-
-    with torch.no_grad():
-        for i, (inputs, labels) in enumerate(dataloaders['val']):
-            inputs = inputs.to(device)
-            labels = labels.to(device)
-
-            outputs = model(inputs)
-            _, preds = torch.max(outputs, 1)
-
-            for j in range(inputs.size()[0]):
-                images_so_far += 1
-                ax = plt.subplot(num_images//2, 2, images_so_far)
-                ax.axis('off')
-                ax.set_title(f'predicted: {class_names[preds[j]]}')
-                imshow(inputs.cpu().data[j])
-
-                if images_so_far == num_images:
-                    model.train(mode=was_training)
-                    return
-        model.train(mode=was_training)
-
-#### Finetuning the convnet ####
-# Load a pretrained model and reset final fully connected layer.
 
 model = models.resnet18(pretrained=True)
 num_ftrs = model.fc.in_features
-# Here the size of each output sample is set to 2.
-# Alternatively, it can be generalized to nn.Linear(num_ftrs, len(class_names)).
+
 model.fc = nn.Linear(num_ftrs, 4)
+
 
 model = model.to(device)
 
 criterion = nn.CrossEntropyLoss()
 
-# Observe that all parameters are being optimized
 optimizer = optim.SGD(model.parameters(), lr=0.001)
-
-# StepLR Decays the learning rate of each parameter group by gamma every step_size epochs
-# Decay LR by a factor of 0.1 every 7 epochs
-# Learning rate scheduling should be applied after optimizer’s update
-# e.g., you should write your code this way:
-# for epoch in range(100):
-#     train(...)
-#     validate(...)
-#     scheduler.step()
 
 step_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=7, gamma=0.1)
 
-model = train_model(model, criterion, optimizer, step_lr_scheduler, num_epochs=25)
+model = train_model(model, criterion, optimizer, step_lr_scheduler, num_epochs=10)
+
